@@ -22,7 +22,7 @@ HistogramBuilder& HistogramBuilder::Help(const std::string& help) {
 }
 
 Family<Histogram>& HistogramBuilder::Register(Registry& registry) {
-  return registry.Add<Histogram>(name_, help_, labels_);
+  return registry.AddHistogram(name_, help_, labels_);
 }
 
 }  // namespace detail

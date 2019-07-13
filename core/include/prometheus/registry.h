@@ -36,6 +36,20 @@ namespace prometheus {
 /// a data race.
 class Registry : public Collectable {
  public:
+  /// \brief How to deal with repeatedly added family names for a type
+  enum class InsertBehavior {
+    /// \brief Create new family object and append
+    Append,
+    /// \brief Merge with existing ones if possible
+    Merge,
+  };
+
+  /// \brief name Create a new registry.
+  ///
+  /// \param insert_behavior How to handle families with the same name.
+  explicit Registry(InsertBehavior insert_behavior = InsertBehavior::Append)
+      : insert_behavior_{insert_behavior} {}
+
   /// \brief Returns a list of metrics and their samples.
   ///
   /// Every time the Registry is scraped it calls each of the metrics Collect
@@ -52,20 +66,28 @@ class Registry : public Collectable {
 
   template <typename T>
   Family<T>& Add(const std::string& name, const std::string& help,
-                 const std::map<std::string, std::string>& labels);
+                 const std::map<std::string, std::string>& labels,
+                 std::vector<std::unique_ptr<Family<T>>>& families);
 
-  std::vector<std::unique_ptr<Collectable>> collectables_;
+  Family<Counter>& AddCounter(const std::string& name, const std::string& help,
+                              const std::map<std::string, std::string>& labels);
+
+  Family<Gauge>& AddGauge(const std::string& name, const std::string& help,
+                          const std::map<std::string, std::string>& labels);
+
+  Family<Histogram>& AddHistogram(
+      const std::string& name, const std::string& help,
+      const std::map<std::string, std::string>& labels);
+
+  Family<Summary>& AddSummary(const std::string& name, const std::string& help,
+                              const std::map<std::string, std::string>& labels);
+
+  const InsertBehavior insert_behavior_;
+  std::vector<std::unique_ptr<Family<Counter>>> counters_;
+  std::vector<std::unique_ptr<Family<Gauge>>> gauges_;
+  std::vector<std::unique_ptr<Family<Histogram>>> histograms_;
+  std::vector<std::unique_ptr<Family<Summary>>> summaries_;
   std::mutex mutex_;
 };
-
-template <typename T>
-Family<T>& Registry::Add(const std::string& name, const std::string& help,
-                         const std::map<std::string, std::string>& labels) {
-  std::lock_guard<std::mutex> lock{mutex_};
-  auto family = detail::make_unique<Family<T>>(name, help, labels);
-  auto& ref = *family;
-  collectables_.push_back(std::move(family));
-  return ref;
-}
 
 }  // namespace prometheus

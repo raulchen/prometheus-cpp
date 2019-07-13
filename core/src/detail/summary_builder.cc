@@ -22,7 +22,7 @@ SummaryBuilder& SummaryBuilder::Help(const std::string& help) {
 }
 
 Family<Summary>& SummaryBuilder::Register(Registry& registry) {
-  return registry.Add<Summary>(name_, help_, labels_);
+  return registry.AddSummary(name_, help_, labels_);
 }
 
 }  // namespace detail
